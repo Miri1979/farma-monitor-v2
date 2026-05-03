@@ -63,11 +63,12 @@ export default function App() {
   const [filtroBoletin, setFiltroBoletin] = useState("Todos");
   const [soloAlta, setSoloAlta] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cargandoBOE, setCargandoBOE] = useState(false);
   const [modo, setModo] = useState("hoy");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [buscando, setBuscando] = useState(false);
-  const [cargandoBOE, setCargandoBOE] = useState(false);
+  const [msg, setMsg] = useState("");
 
   const fechaHoy = new Date().toISOString().slice(0, 10);
   const today = new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -84,8 +85,21 @@ export default function App() {
     setLoading(true); setMsg(""); setNormas([]);
     const n = await cargarDia(fechaHoy);
     setNormas(n);
-    if (n.length === 0) setMsg("No hay normas cargadas para hoy. Si es día laborable, vuelve a intentarlo más tarde o ejecuta la carga manual desde /api/force-fetch");
+    if (n.length === 0) setMsg("No hay normas cargadas para hoy. Pulsa '⬇ Cargar BOE ahora' para descargarlas.");
     setLoading(false);
+  };
+
+  const forzarCarga = async () => {
+    setCargandoBOE(true);
+    setMsg("Descargando boletines y analizando con IA… puede tardar 2-3 minutos.");
+    try {
+      await fetch("/api/force-fetch");
+      await cargarHoy();
+      setMsg("");
+    } catch {
+      setMsg("Error al cargar los boletines. Inténtalo de nuevo.");
+    }
+    setCargandoBOE(false);
   };
 
   const buscarRango = async () => {
@@ -114,20 +128,17 @@ export default function App() {
     const okA = !soloAlta || n.relevancia_farma === "Alta";
     return okB && okA;
   });
-
   const altaCount = normas.filter(n => n.relevancia_farma === "Alta").length;
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", maxWidth: 500, margin: "0 auto", padding: "16px 12px", background: "#fafafa", minHeight: "100vh" }}>
 
-      {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <p style={{ margin: 0, fontSize: 19, fontWeight: 700 }}>Monitor Legislativo</p>
         <p style={{ margin: "2px 0 0", fontSize: 12, color: "#888" }}>BOE · DOUE · 17 boletines autonómicos</p>
         <p style={{ margin: "4px 0 0", fontSize: 12, color: "#aaa" }}>{today}</p>
       </div>
 
-      {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 16 }}>
         <div style={{ background: "#fff", borderRadius: 10, padding: "10px 14px", border: "0.5px solid #e0e0e0" }}>
           <p style={{ margin: 0, fontSize: 11, color: "#888" }}>Normas {modo === "hoy" ? "hoy" : "en rango"}</p>
@@ -139,8 +150,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
         {[{ id: "hoy", label: "📅 Hoy" }, { id: "rango", label: "🔍 Por fechas" }].map(m => (
           <button key={m.id} onClick={() => { setModo(m.id); if (m.id === "hoy") cargarHoy(); }} style={{
             fontSize: 12, padding: "7px 14px", borderRadius: 8, cursor: "pointer",
@@ -151,17 +161,16 @@ export default function App() {
           }}>{m.label}</button>
         ))}
         <button onClick={cargarHoy} disabled={loading || buscando || cargandoBOE} style={{
-          fontSize: 12, padding: "7px 12px", borderRadius: 8, marginLeft: "auto",
+          fontSize: 12, padding: "7px 12px", borderRadius: 8,
           border: "0.5px solid #ccc", background: "#fff", cursor: "pointer", color: "#555"
-        }}>↻ Actualizar</button>
+        }}>↻</button>
         <button onClick={forzarCarga} disabled={cargandoBOE || loading || buscando} style={{
           fontSize: 12, padding: "7px 12px", borderRadius: 8,
-          border: "none", background: cargandoBOE ? "#ccc" : "#185FA5",
+          border: "none", background: cargandoBOE ? "#aaa" : "#185FA5",
           color: "#fff", cursor: "pointer",
         }}>{cargandoBOE ? "Descargando…" : "⬇ Cargar BOE ahora"}</button>
       </div>
 
-      {/* Buscador rango */}
       {modo === "rango" && (
         <div style={{ marginBottom: 14, padding: 14, background: "#fff", borderRadius: 10, border: "0.5px solid #e0e0e0" }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -184,7 +193,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Filtros */}
       {normas.length > 0 && (
         <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
           <button onClick={() => setSoloAlta(!soloAlta)} style={{
@@ -200,14 +208,12 @@ export default function App() {
         </div>
       )}
 
-      {/* Mensaje */}
       {msg && (
         <div style={{ marginBottom: 12, padding: "10px 14px", background: "#FFF8E1", border: "0.5px solid #FFD54F", borderRadius: 8 }}>
           <p style={{ margin: 0, fontSize: 12, color: "#854F0B", lineHeight: 1.5 }}>{msg}</p>
         </div>
       )}
 
-      {/* Lista */}
       {loading || buscando ? (
         <div style={{ textAlign: "center", padding: "3rem 0", color: "#aaa", fontSize: 13 }}>
           {buscando ? "Buscando normas…" : "Cargando boletines…"}
@@ -220,7 +226,7 @@ export default function App() {
 
       <div style={{ marginTop: 20, padding: "10px 14px", background: "#f0f0f0", borderRadius: 8 }}>
         <p style={{ margin: 0, fontSize: 11, color: "#999", lineHeight: 1.5 }}>
-          Actualización automática lunes a viernes a las 8:00h.
+          Actualización automática lunes a viernes a las 8:00h. Pulsa "⬇ Cargar BOE ahora" para actualizar en cualquier momento.
         </p>
       </div>
     </div>
