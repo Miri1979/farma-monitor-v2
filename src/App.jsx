@@ -67,7 +67,7 @@ export default function App() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [buscando, setBuscando] = useState(false);
-  const [msg, setMsg] = useState("");
+  const [cargandoBOE, setCargandoBOE] = useState(false);
 
   const fechaHoy = new Date().toISOString().slice(0, 10);
   const today = new Date().toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -150,10 +150,15 @@ export default function App() {
             fontWeight: modo === m.id ? 600 : 400,
           }}>{m.label}</button>
         ))}
-        <button onClick={cargarHoy} disabled={loading || buscando} style={{
+        <button onClick={cargarHoy} disabled={loading || buscando || cargandoBOE} style={{
           fontSize: 12, padding: "7px 12px", borderRadius: 8, marginLeft: "auto",
           border: "0.5px solid #ccc", background: "#fff", cursor: "pointer", color: "#555"
         }}>↻ Actualizar</button>
+        <button onClick={forzarCarga} disabled={cargandoBOE || loading || buscando} style={{
+          fontSize: 12, padding: "7px 12px", borderRadius: 8,
+          border: "none", background: cargandoBOE ? "#ccc" : "#185FA5",
+          color: "#fff", cursor: "pointer",
+        }}>{cargandoBOE ? "Descargando…" : "⬇ Cargar BOE ahora"}</button>
       </div>
 
       {/* Buscador rango */}
